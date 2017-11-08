@@ -26278,7 +26278,6 @@ cr.getObjectRefTable = function () { return [
 	cr.plugins_.Sprite.prototype.acts.MoveToLayer,
 	cr.system_object.prototype.cnds.OnLayoutStart,
 	cr.system_object.prototype.acts.CreateObject,
-	cr.plugins_.admob.prototype.acts.PreloadBanner,
 	cr.system_object.prototype.cnds.CompareVar,
 	cr.plugins_.Audio.prototype.acts.StopAll,
 	cr.plugins_.Audio.prototype.acts.Play,
@@ -26293,6 +26292,7 @@ cr.getObjectRefTable = function () { return [
 	cr.plugins_.Touch.prototype.cnds.OnTapGestureObject,
 	cr.system_object.prototype.acts.Wait,
 	cr.system_object.prototype.acts.RestartLayout,
+	cr.plugins_.admob.prototype.acts.ShowInterstitial,
 	cr.system_object.prototype.acts.GoToLayout,
 	cr.plugins_.Spritefont2.prototype.acts.SetText,
 	cr.behaviors.lunarray_LiteTween.prototype.acts.Start,
@@ -26321,7 +26321,6 @@ cr.getObjectRefTable = function () { return [
 	cr.system_object.prototype.cnds.Compare,
 	cr.system_object.prototype.exps.layoutname,
 	cr.system_object.prototype.acts.GoToLayoutByName,
-	cr.plugins_.admob.prototype.acts.ShowInterstitial,
 	cr.plugins_.Sprite.prototype.cnds.IsOnScreen,
 	cr.plugins_.Sprite.prototype.acts.SetAnim,
 	cr.system_object.prototype.cnds.IsGroupActive,
@@ -26339,5 +26338,6 @@ cr.getObjectRefTable = function () { return [
 	cr.plugins_.Browser.prototype.acts.CancelFullScreen,
 	cr.plugins_.Audio.prototype.acts.SetSilent,
 	cr.plugins_.WebStorage.prototype.cnds.LocalStorageExists,
-	cr.plugins_.WebStorage.prototype.exps.LocalValue
+	cr.plugins_.WebStorage.prototype.exps.LocalValue,
+	cr.plugins_.admob.prototype.acts.ShowBanner
 ];};
