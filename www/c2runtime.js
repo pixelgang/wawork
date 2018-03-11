@@ -3548,6 +3548,7 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 		this.fps = 0;
 		this.last_fps_time = 0;
 		this.tickcount = 0;
+		this.tickcount_nosave = 0;	// same as tickcount but never saved/loaded
 		this.execcount = 0;
 		this.framecount = 0;        // for fps
 		this.objectcount = 0;
@@ -5054,6 +5055,7 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 		if (!this.hit_breakpoint)
 		{
 			this.tickcount++;
+			this.tickcount_nosave++;
 			this.execcount++;
 			this.framecount++;
 		}
@@ -7494,7 +7496,7 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 	};
 	Runtime.prototype.loadInstanceFromJSON = function(inst, o, state_only)
 	{
-		var p, i, len, iv, oivs, world, fxindex, obehs, behindex;
+		var p, i, len, iv, oivs, world, fxindex, obehs, behindex, value;
 		var oldlayer;
 		var type = inst.type;
 		var plugin = type.plugin;
@@ -7519,7 +7521,10 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 					iv = this.getInstanceVarIndexBySid(type, parseInt(p, 10));
 					if (iv < 0 || iv >= inst.instance_vars.length)
 						continue;		// must've gone missing
-					inst.instance_vars[iv] = oivs[p];
+					value = oivs[p];
+					if (value === null)
+						value = NaN;
+					inst.instance_vars[iv] = value;
 				}
 			}
 		}
@@ -16971,6 +16976,8 @@ cr.plugins_.Audio = function(runtime)
 		var isAndroid = this.runtime.isAndroid;
 		var playDummyBuffer = function ()
 		{
+			if (context["state"] === "suspended" && context["resume"])
+				context["resume"]();
 			if (isContextSuspended || !context["createBuffer"])
 				return;
 			var buffer = context["createBuffer"](1, 220, 22050);
@@ -22832,8 +22839,15 @@ cr.plugins_.Touch = function(runtime)
 			return this.orient_gamma;
 	};
 	var noop_func = function(){};
+	function isCompatibilityMouseEvent(e)
+	{
+		return (e["sourceCapabilities"] && e["sourceCapabilities"]["firesTouchEvents"]) ||
+				(e.originalEvent && e.originalEvent["sourceCapabilities"] && e.originalEvent["sourceCapabilities"]["firesTouchEvents"]);
+	};
 	instanceProto.onMouseDown = function(info)
 	{
+		if (isCompatibilityMouseEvent(info))
+			return;
 		var t = { pageX: info.pageX, pageY: info.pageY, "identifier": 0 };
 		var fakeinfo = { changedTouches: [t] };
 		this.onTouchStart(fakeinfo);
@@ -22842,6 +22856,8 @@ cr.plugins_.Touch = function(runtime)
 	instanceProto.onMouseMove = function(info)
 	{
 		if (!this.mouseDown)
+			return;
+		if (isCompatibilityMouseEvent(info))
 			return;
 		var t = { pageX: info.pageX, pageY: info.pageY, "identifier": 0 };
 		var fakeinfo = { changedTouches: [t] };
@@ -22852,6 +22868,8 @@ cr.plugins_.Touch = function(runtime)
 		if (info.preventDefault && this.runtime.had_a_click && !this.runtime.isMobile)
 			info.preventDefault();
 		this.runtime.had_a_click = true;
+		if (isCompatibilityMouseEvent(info))
+			return;
 		var t = { pageX: info.pageX, pageY: info.pageY, "identifier": 0 };
 		var fakeinfo = { changedTouches: [t] };
 		this.onTouchEnd(fakeinfo);
@@ -24581,6 +24599,8 @@ cr.behaviors.Sin = function(runtime)
 		this.initialValue = 0;
 		this.initialValue2 = 0;
 		this.ratio = 0;
+		if (this.movement === 5)			// angle
+			this.mag = cr.to_radians(this.mag);
 		this.init();
 	};
 	behinstProto.saveToJSON = function ()
@@ -24634,7 +24654,6 @@ cr.behaviors.Sin = function(runtime)
 			break;
 		case 5:		// angle
 			this.initialValue = this.inst.angle;
-			this.mag = cr.to_radians(this.mag);		// convert magnitude from degrees to radians
 			break;
 		case 6:		// opacity
 			this.initialValue = this.inst.opacity;
@@ -24796,7 +24815,7 @@ cr.behaviors.Sin = function(runtime)
 	};
 	Acts.prototype.SetMovement = function (m)
 	{
-		if (this.movement === 5)
+		if (this.movement === 5 && m !== 5)
 			this.mag = cr.to_degrees(this.mag);
 		this.movement = m;
 		this.init();
@@ -25472,7 +25491,6 @@ var TweenObject = function()
     this.pingpong = 1.0;
     this.flipEase = false;
     this.easingparam = [];
-    this.lastState = 1;
     for (var i=0; i<28; i++) {
       this.easingparam[i] = {};
       this.easingparam[i].a = 0.0;
@@ -25702,6 +25720,7 @@ cr.behaviors.lunarray_LiteTween = function(runtime)
 	{
     var x = JSON.parse(o["tweenlist"]);
     var tempObj = TweenObject.Load(x, x.name, x.tweened, x.easefunc, x.initialparam1+","+x.initialparam2, x.targetparam1+","+x.targetparam2, x.duration, x.enforce);
+    console.log(tempObj);
 		this.tween_list["default"] = tempObj;
 	  this.playmode = o["playmode"];
 		this.active = o["active"];
@@ -25746,7 +25765,7 @@ cr.behaviors.lunarray_LiteTween = function(runtime)
         inst.state = 1;
       }
       if (startMode === 1) {
-        inst.state = inst.lastState;
+        inst.state = 1;
       }
       if ((startMode === 2) || (startMode === 4)) {
         inst.progress = 0.000001;
@@ -25769,8 +25788,6 @@ cr.behaviors.lunarray_LiteTween = function(runtime)
 	{
     for (var i in this.tween_list) {
       var inst = this.tween_list[i];
-      if ((inst.state != 3) && (inst.state != 0)) //don't save paused/seek state
-        inst.lastState = inst.state;
       if (stopMode === 1) inst.progress = 0.0;
       if (stopMode === 2) inst.progress = inst.duration;
       inst.state = 3;
@@ -26257,16 +26274,16 @@ cr.behaviors.scrollto = function(runtime)
 }());
 cr.getObjectRefTable = function () { return [
 	cr.plugins_.admob,
-	cr.plugins_.Audio,
 	cr.plugins_.Browser,
+	cr.plugins_.Audio,
 	cr.plugins_.Function,
-	cr.plugins_.Keyboard,
 	cr.plugins_.Particles,
+	cr.plugins_.Keyboard,
 	cr.plugins_.Spritefont2,
-	cr.plugins_.TiledBg,
-	cr.plugins_.Touch,
 	cr.plugins_.Sprite,
+	cr.plugins_.Touch,
 	cr.plugins_.WebStorage,
+	cr.plugins_.TiledBg,
 	cr.behaviors.Sin,
 	cr.behaviors.Fade,
 	cr.behaviors.lunarray_LiteTween,
